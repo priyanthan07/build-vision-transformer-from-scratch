@@ -1,0 +1,45 @@
+flowchart TD
+    Input["Input Tensor\nx: [B, T, C]"] --> QProj["Q Projection\nq_proj(x)"]
+    Input --> KProj["K Projection\nk_proj(x)"]
+    Input --> VProj["V Projection\nv_proj(x)"]
+    
+    QProj --> QReshape["Reshape & Transpose\n[B, num_heads, T, head_dim]"]
+    KProj --> KReshape["Reshape & Transpose\n[B, num_heads, T, head_dim]"]
+    VProj --> VReshape["Reshape & Transpose\n[B, num_heads, T, head_dim]"]
+    
+    QReshape --> MatMul1["Matrix Multiply\nQ × K^T"]
+    KReshape --> MatMul1
+    
+    MatMul1 --> Scale["Scale\n× 1/sqrt(head_dim)"]
+    Scale --> Softmax["Softmax\nF.softmax(dim=-1)"]
+    
+    Softmax --> MatMul2["Matrix Multiply\nAttention × V"]
+    VReshape --> MatMul2
+    
+    MatMul2 --> TransposeBack["Transpose Back\n[B, T, num_heads, head_dim]"]
+    TransposeBack --> Reshape["Reshape\n[B, T, C]"]
+    
+    Reshape --> OutProj["Output Projection\nout_proj(x)"]
+    OutProj --> Dropout["Dropout\nF.dropout(p=dropout)"]
+    
+    Dropout --> Output["Output Tensor\n[B, T, C]"]
+    
+    subgraph "Multi-Head Split"
+        QReshape
+        KReshape
+        VReshape
+    end
+    
+    subgraph "Attention Calculation"
+        MatMul1
+        Scale
+        Softmax
+        MatMul2
+    end
+    
+    subgraph "Head Recombination"
+        TransposeBack
+        Reshape
+        OutProj
+        Dropout
+    end
